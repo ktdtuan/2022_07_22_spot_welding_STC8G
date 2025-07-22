@@ -24,20 +24,19 @@ void uart_tx_dec(uint32_t dec);
 
 static uint16_t counter = 0;
 
+uint8_t time_on[3] = {4, 4, 0};
+uint8_t interval[3] = {9, 9, 0};
 INTERRUPT(Timer0_Routine, EXTI_VectTimer0)
 {
 	counter++;
-	if (counter == 1000)
+	if (counter <)
 	{
 		counter = 0;
-		// UART1_TxString("hello\r\n");
 	}
 }
 
 INTERRUPT(Timer2_Routine, EXTI_VectTimer2) // interrupt 10ms
 {
-	// UART1_TxString("hello\r\n");
-	// timer_periodic_poll();
 	timer_tick += 1;
 }
 
@@ -54,6 +53,23 @@ void uart_tx_dec(uint32_t dec)
 		UART1_TxChar(buf[i]);
 
 	UART1_TxString("\r\n");
+}
+
+void enable_trigger(void)
+{
+	for (uint8_t i = 0; i < systerm.pulse; i++)
+	{
+		if (i + 1 == systerm.pulse)
+		{
+			time_on[i] = systerm.interval;
+			interval[i] = 1000;
+		}
+		else
+		{
+			time_on[i] = 4;
+			interval[i] = 9;
+		}
+	}
 }
 
 void IO_Config(void)
@@ -93,13 +109,13 @@ void main(void)
 	// UART1 configuration: baud 115200 with Timer1, 1T mode, no interrupt
 	UART1_Config8bitUart(UART1_BaudSource_Timer1, HAL_State_ON, 115200);
 
-	//     // TIM_Timer0_Config(HAL_State_ON, TIM_TimerMode_16BitAuto, 1000);
-	//     // EXTI_Timer0_SetIntState(HAL_State_ON);
-	//     // EXTI_Timer0_SetIntPriority(EXTI_IntPriority_High);
+	TIM_Timer0_Config(HAL_State_ON, TIM_TimerMode_16BitAuto, 1000);
+	EXTI_Timer0_SetIntState(HAL_State_ON);
+	EXTI_Timer0_SetIntPriority(EXTI_IntPriority_High);
 
 	// timer for virtual
 	// 1T mode, prescaler:255+1, frequency: 1, interrupt: ON
-	TIM_Timer2_Config(HAL_State_ON, 0xFF, 100);
+	TIM_Timer2_Config(HAL_State_ON, 0xFF, 200);
 	EXTI_Timer2_SetIntState(HAL_State_ON);
 
 	EXTI_Global_SetIntState(HAL_State_ON);

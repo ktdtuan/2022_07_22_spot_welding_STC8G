@@ -17,7 +17,7 @@ uint8_t btn_sw1_check(void)
 		stt_sw1 = de_active;
 		if (interval > 200)
 			return 2; // hold
-		else if (interval > 10 && interval < 30)
+		else if (interval > 20 && interval < 60)
 			return 1; // click
 	}
 
@@ -40,7 +40,7 @@ uint8_t btn_sw2_check(void)
 		stt_sw2 = de_active;
 		if (interval > 200)
 			return 2; // hold
-		else if (interval > 10 && interval < 30)
+		else if (interval > 20 && interval < 60)
 			return 1; // click
 	}
 
@@ -55,7 +55,6 @@ uint8_t btn_sw2_check(void)
 void btn_handle(void)
 {
 	uint8_t sw_stt1, sw_stt2;
-	// uint8_t sw_stt1_old, sw_stt2_old;
 
 	sw_stt1 = btn_sw1_check();
 	sw_stt2 = btn_sw2_check();
@@ -100,30 +99,4 @@ void btn_handle(void)
 			systerm.mode = bt_mode_nomal;
 		break;
 	}
-
-	// if (sw_stt2_old != sw_stt2 || sw_stt1_old != sw_stt1)
-	// {
-	// 	sw_stt2_old = sw_stt2;
-	// 	sw_stt1_old = sw_stt1;
-
-	// 	if (systerm.mode == bt_mode_nomal)
-	// 	{
-	// 		UART1_TxString("nomal ");
-	// 		uart_tx_dec(systerm.interval);
-	// 	}
-	// 	else if (systerm.mode == bt_mode_power)
-	// 	{
-	// 		UART1_TxString("power ");
-	// 		uart_tx_dec(systerm.power);
-	// 	}
-	// 	else if (systerm.mode == bt_mode_pluse)
-	// 	{
-	// 		UART1_TxString("pulse ");
-	// 		uart_tx_dec(systerm.pulse);
-	// 	}
-	// 	else
-	// 	{
-	// 		UART1_TxString("default ");
-	// 	}
-	// }
 }

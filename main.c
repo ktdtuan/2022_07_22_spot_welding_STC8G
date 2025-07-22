@@ -1,10 +1,26 @@
 #include "fw_hal.h"
-#include "timer_virtural.h"
 
 static uint32_t timer_tick;
-#include "segment.c"
-#include "volt.c"
-#include "button.c"
+static uint32_t volt_value;
+
+typedef enum
+{
+	bt_mode_nomal,
+	bt_mode_power,
+	bt_mode_pluse,
+} bt_mode_run_t;
+struct
+{
+	bt_mode_run_t mode; // mode đang hoạt động
+	uint8_t interval;	// thời gian 1 xung
+	uint8_t power;		// năng lượng
+	uint8_t pulse;		// số xung
+} systerm;
+
+void uart_tx_dec(uint32_t dec);
+#include "msp_segment.c"
+#include "msp_volt.c"
+#include "msp_button.c"
 
 static uint16_t counter = 0;
 
@@ -14,16 +30,30 @@ INTERRUPT(Timer0_Routine, EXTI_VectTimer0)
 	if (counter == 1000)
 	{
 		counter = 0;
-		UART1_TxString("hello\r\n");
+		// UART1_TxString("hello\r\n");
 	}
 }
 
-INTERRUPT(Timer2_Routine, EXTI_VectTimer2)
+INTERRUPT(Timer2_Routine, EXTI_VectTimer2) // interrupt 10ms
 {
 	// UART1_TxString("hello\r\n");
 	// timer_periodic_poll();
-	// button_timme_tick();
 	timer_tick += 1;
+}
+
+void uart_tx_dec(uint32_t dec)
+{
+	char buf[10];
+	int i = 0;
+	while (dec > 0)
+	{
+		buf[i++] = (dec % 10) + '0';
+		dec /= 10;
+	}
+	while (i--)
+		UART1_TxChar(buf[i]);
+
+	UART1_TxString("\r\n");
 }
 
 void IO_Config(void)
@@ -58,7 +88,7 @@ void main(void)
 	SYS_SetClock();
 
 	IO_Config();
-	// volt_init();
+	volt_init();
 
 	// UART1 configuration: baud 115200 with Timer1, 1T mode, no interrupt
 	UART1_Config8bitUart(UART1_BaudSource_Timer1, HAL_State_ON, 115200);
@@ -75,9 +105,17 @@ void main(void)
 	EXTI_Global_SetIntState(HAL_State_ON);
 	//    TIM_Timer0_SetRunState(HAL_State_ON);
 	TIM_Timer2_SetRunState(HAL_State_ON);
+
+	//
+	systerm.mode = bt_mode_nomal;
+	systerm.interval = 1;
+	systerm.power = 1;
+	systerm.pulse = 1;
 	while (1)
 	{
-		// seg_request();
+		seg_handle();
+		seg_request();
 		volt_read();
+		btn_handle();
 	}
 }

@@ -1,4 +1,5 @@
 #include "fw_hal.h"
+#include "fw_adc.h"
 
 void volt_init(void)
 {
@@ -14,24 +15,17 @@ void volt_init(void)
 	ADC_SetPowerState(HAL_State_ON);
 }
 
-uint8_t bff[10];
-// #include "stdio.h"
 void volt_read(void)
 {
-	uint16_t volt_value;
 	static uint32_t timer_wait_2s;
-	if ((uint32_t)(timer_tick - timer_wait_2s) > 2000)
+	if ((uint32_t)(timer_tick - timer_wait_2s) > 200)
 	{
 		timer_wait_2s = timer_tick;
 
-		ADC_Start();
-		NOP();
-		NOP();
-		while (!ADC_SamplingFinished())			;
-		ADC_ClearInterrupt();
-		volt_value = ((ADC_RES * 5) / 0xFF) * 1268;
-		// sprintf(bff, "%.2f", volt_value);
-		// UART1_TxString(bff);
-		// UART1_TxString("\r\n");
+		// R1 = 200kOhm, R2 = 16.8kOhm
+		// range = 0 - 255;
+		volt_value = ((uint32_t)(ADC_Convert() * 5) * 126 / 255); // x10 volt.
+
+		// uart_tx_dec(volt_value);
 	}
 }

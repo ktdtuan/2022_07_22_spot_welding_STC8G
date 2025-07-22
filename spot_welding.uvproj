@@ -324,7 +324,7 @@
               <MiscControls></MiscControls>
               <Define>__CX51__, __CONF_MCU_MODEL=MCU_MODEL_STC8G1K08, __CONF_FOSC=11059200UL</Define>
               <Undefine></Undefine>
-              <IncludePath>.\FwLib_STC8\include;.\timeVirtural</IncludePath>
+              <IncludePath>.\FwLib_STC8\include</IncludePath>
             </VariousControls>
           </C51>
           <Ax51>
@@ -410,16 +410,6 @@
               <FileName>fw_uart.c</FileName>
               <FileType>1</FileType>
               <FilePath>.\FwLib_STC8\src\fw_uart.c</FilePath>
-            </File>
-          </Files>
-        </Group>
-        <Group>
-          <GroupName>timeVirtural</GroupName>
-          <Files>
-            <File>
-              <FileName>timer_virtural.c</FileName>
-              <FileType>1</FileType>
-              <FilePath>.\timeVirtural\timer_virtural.c</FilePath>
             </File>
           </Files>
         </Group>

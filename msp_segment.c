@@ -98,13 +98,13 @@ void seg_display(uint8_t index)
 
 void seg_request(void)
 {
-	static uint32_t timer_wait_2s = 0;
+	static uint32_t timer_wait = 0;
 	static uint8_t seg_index = 0;
 
 	// set interval refresh segment
-	if (timer_tick != timer_wait_2s)
+	if (timer_tick != timer_wait)
 	{
-		timer_wait_2s = timer_tick;
+		timer_wait = timer_tick;
 
 		// làm mới dữ liệu hiển thị ở màng hình
 		seg_display(seg_index);
@@ -130,12 +130,12 @@ void seg_handle(void)
 	case bt_mode_nomal:
 		if ((uint32_t)(timer_tick - time_wait) < 400)
 		{
-			if (data_cmp != systerm.interval)
+			if (data_cmp != systerm.duty)
 			{
 				seg_buffer[0] = segment_code[15]; // d
-				seg_buffer[1] = segment_code[systerm.interval / 10];
-				seg_buffer[2] = segment_code[systerm.interval % 10];
-				data_cmp = systerm.interval;
+				seg_buffer[1] = segment_code[systerm.duty / 10];
+				seg_buffer[2] = segment_code[systerm.duty % 10];
+				data_cmp = systerm.duty;
 				time_wait = timer_tick;
 			}
 		}
@@ -163,17 +163,17 @@ void seg_handle(void)
 	case bt_mode_power:
 		if (data_cmp == systerm.power)
 			break;
-		seg_buffer[0] = segment_code[27]; // Power
-		seg_buffer[1] = segment_code[10]; // -
-		seg_buffer[2] = segment_code[systerm.power];
+		seg_buffer[0] = segment_code[27];			 // Power
+		seg_buffer[1] = segment_code[10];			 // -
+		seg_buffer[2] = segment_code[systerm.power]; // 1-2-3
 		data_cmp = systerm.power;
 		break;
 	case bt_mode_pluse:
 		if (data_cmp == systerm.pulse)
 			break;
-		seg_buffer[0] = segment_code[30]; // Signal
-		seg_buffer[1] = segment_code[10]; // -
-		seg_buffer[2] = segment_code[systerm.pulse];
+		seg_buffer[0] = segment_code[30];					   // Signal
+		seg_buffer[1] = segment_code[10];					   // -
+		seg_buffer[2] = segment_code[(systerm.pulse / 2 + 1)]; // vì số xung này sẽ là 1,3,5, nhưng hiển thị là 1,2,3
 		data_cmp = systerm.pulse;
 		break;
 	}

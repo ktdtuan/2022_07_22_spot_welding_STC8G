@@ -12,26 +12,31 @@ typedef enum
 struct
 {
 	bt_mode_run_t mode; // mode đang hoạt động
-	uint8_t interval;	// thời gian 1 xung
-	uint8_t power;		// năng lượng
-	uint8_t pulse;		// số xung
+	uint8_t duty;		// thời gian on 1 xung
+	uint8_t power;		// năng lượng giá trị chứa 1, 2, 3
+	uint8_t pulse;		// số xung. giá trị chứa 1, 3, 5
 } systerm;
 
 void uart_tx_dec(uint32_t dec);
+
+void enable_trigger(void);
 #include "msp_segment.c"
 #include "msp_volt.c"
 #include "msp_button.c"
 
-static uint16_t counter = 0;
+static uint8_t counter = 0;
+static uint8_t location = 0;
 
-uint8_t time_on[3] = {4, 4, 0};
-uint8_t interval[3] = {9, 9, 0};
+const uint8_t edge[6] = {0, 1, 0, 1, 0, 1};
+uint16_t frequency[6] = {4, 5, 4, 5, 1, 100};
 INTERRUPT(Timer0_Routine, EXTI_VectTimer0)
 {
-	counter++;
-	if (counter <)
+	if (++counter >= frequency[location])
 	{
 		counter = 0;
+		if (++location >= systerm.pulse)
+			TIM_Timer0_SetRunState(HAL_State_OFF);
+		P11 = edge[location];
 	}
 }
 
@@ -44,6 +49,8 @@ void uart_tx_dec(uint32_t dec)
 {
 	char buf[10];
 	int i = 0;
+	if (dec == 0)
+		buf[i++] = (dec % 10) + '0';
 	while (dec > 0)
 	{
 		buf[i++] = (dec % 10) + '0';
@@ -57,19 +64,19 @@ void uart_tx_dec(uint32_t dec)
 
 void enable_trigger(void)
 {
-	for (uint8_t i = 0; i < systerm.pulse; i++)
+	uint8_t i;
+
+	for (i = 0; i < systerm.pulse - 1; i += 2)
 	{
-		if (i + 1 == systerm.pulse)
-		{
-			time_on[i] = systerm.interval;
-			interval[i] = 1000;
-		}
-		else
-		{
-			time_on[i] = 4;
-			interval[i] = 9;
-		}
+		frequency[i] = 4;
+		frequency[i + 1] = 5;
 	}
+	frequency[i] = systerm.duty * systerm.power;
+	frequency[i + 1] = 100;
+
+	location = 0;
+	TIM_Timer0_SetRunState(HAL_State_ON);
+	P11 = 0;
 }
 
 void IO_Config(void)
@@ -119,12 +126,12 @@ void main(void)
 	EXTI_Timer2_SetIntState(HAL_State_ON);
 
 	EXTI_Global_SetIntState(HAL_State_ON);
-	//    TIM_Timer0_SetRunState(HAL_State_ON);
+	// TIM_Timer0_SetRunState(HAL_State_ON);
 	TIM_Timer2_SetRunState(HAL_State_ON);
 
 	//
 	systerm.mode = bt_mode_nomal;
-	systerm.interval = 1;
+	systerm.duty = 5;
 	systerm.power = 1;
 	systerm.pulse = 1;
 	while (1)

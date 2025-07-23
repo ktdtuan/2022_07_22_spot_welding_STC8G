@@ -1,6 +1,5 @@
 #include "fw_hal.h"
 
-
 #define BTN_SW1 P36 // nút tăng - SW1
 #define BTN_SW2 P37 // nút giảm - SW2
 #define active RESET
@@ -62,11 +61,14 @@ void btn_handle(void)
 	switch (systerm.mode)
 	{
 	case bt_mode_nomal:
+		if (sw_stt1 == 1)
+			enable_trigger();
+
 		// click
-		if (sw_stt1 == 1 && systerm.interval < 99)
-			systerm.interval += 1;
-		if (sw_stt2 == 1 && systerm.interval > 1)
-			systerm.interval -= 1;
+		if (sw_stt1 == 1 && systerm.duty < 99)
+			systerm.duty += 1;
+		if (sw_stt2 == 1 && systerm.duty > 1)
+			systerm.duty -= 1;
 
 		// hold
 		if (sw_stt1 == 2)
@@ -89,10 +91,10 @@ void btn_handle(void)
 
 	case bt_mode_pluse:
 		// click
-		if (sw_stt1 == 1 && systerm.pulse < 3)
-			systerm.pulse += 1;
+		if (sw_stt1 == 1 && systerm.pulse < 5)
+			systerm.pulse += 2;
 		if (sw_stt2 == 1 && systerm.pulse > 1)
-			systerm.pulse -= 1;
+			systerm.pulse -= 2;
 
 		// hold
 		if (sw_stt2 == 2)

@@ -14,9 +14,9 @@ uint8_t btn_sw1_check(void)
 		uint32_t interval = (uint32_t)(timer_tick - time_sw1);
 
 		stt_sw1 = de_active;
-		if (interval > 200)
+		if (interval > TM2_CAL_TIME(1000))
 			return 2; // hold
-		else if (interval > 20 && interval < 60)
+		else if (interval > TM2_CAL_TIME(100) && interval < TM2_CAL_TIME(300))
 			return 1; // click
 	}
 
@@ -37,9 +37,9 @@ uint8_t btn_sw2_check(void)
 		uint32_t interval = (uint32_t)(timer_tick - time_sw2);
 
 		stt_sw2 = de_active;
-		if (interval > 200)
+		if (interval > TM2_CAL_TIME(1000))
 			return 2; // hold
-		else if (interval > 20 && interval < 60)
+		else if (interval > TM2_CAL_TIME(100) && interval < TM2_CAL_TIME(300))
 			return 1; // click
 	}
 
@@ -53,52 +53,76 @@ uint8_t btn_sw2_check(void)
 
 void btn_handle(void)
 {
+	static uint8_t flag_save = RESET;
+	static uint32_t time_wait;
 	uint8_t sw_stt1, sw_stt2;
 
 	sw_stt1 = btn_sw1_check();
 	sw_stt2 = btn_sw2_check();
 
-	switch (systerm.mode)
+	switch (button_mode)
 	{
-	case bt_mode_nomal:
+	case mode_nomal:
+		// click
 		if (sw_stt1 == 1)
-			enable_trigger();
+		{
+			flag_save = SET;
+			time_wait = timer_tick;
+			(systerm.duty < 99) ? (systerm.duty += 1) : (systerm.duty = 0);
+		}
+		if (sw_stt2 == 1)
+		{
+			flag_save = SET;
+			time_wait = timer_tick;
+			(systerm.duty < 99) ? (systerm.duty += 1) : (systerm.duty = 0);
+		}
 
-		// click
-		if (sw_stt1 == 1 && systerm.duty < 99)
-			systerm.duty += 1;
-		if (sw_stt2 == 1 && systerm.duty > 1)
-			systerm.duty -= 1;
-
-		// hold
-		if (sw_stt1 == 2)
-			systerm.mode = bt_mode_power;
-		if (sw_stt2 == 2)
-			systerm.mode = bt_mode_pluse;
-		break;
-
-	case bt_mode_power:
-		// click
-		if (sw_stt1 == 1 && systerm.power < 3)
-			systerm.power += 1;
-		if (sw_stt2 == 1 && systerm.power > 1)
-			systerm.power -= 1;
+		if (flag_save == SET && (uint32_t)(timer_tick - time_wait) > TM2_CAL_TIME(10000))
+		{
+			flag_save = RESET;
+			eeprom_write();
+		}
 
 		// hold
 		if (sw_stt1 == 2)
-			systerm.mode = bt_mode_nomal;
+			button_mode = mode_power;
+		if (sw_stt2 == 2)
+			button_mode = mode_pluse;
 		break;
 
-	case bt_mode_pluse:
+	case mode_power:
 		// click
-		if (sw_stt1 == 1 && systerm.pulse < 5)
-			systerm.pulse += 2;
-		if (sw_stt2 == 1 && systerm.pulse > 1)
-			systerm.pulse -= 2;
+		if (sw_stt1 == 1)
+			(systerm.power < 3) ? (systerm.power += 1) : (systerm.power = 1);
+		if (sw_stt2 == 1)
+			(systerm.power > 1) ? (systerm.power -= 1) : (systerm.power = 3);
+
+		// hold
+		if (sw_stt1 == 2)
+			button_mode = mode_nomal;
+
+		// enable flag save
+		flag_save = SET;
+		time_wait = timer_tick;
+		break;
+
+	case mode_pluse:
+		// click
+		if (sw_stt1 == 1)
+			(systerm.pulse < 5) ? (systerm.pulse += 2) : (systerm.pulse = 1);
+		if (sw_stt2 == 1)
+			(systerm.pulse > 1) ? (systerm.pulse -= 2) : (systerm.pulse = 5);
 
 		// hold
 		if (sw_stt2 == 2)
-			systerm.mode = bt_mode_nomal;
+		{
+			eeprom_write();
+			button_mode = mode_nomal;
+		}
+
+		// enable flag save
+		flag_save = SET;
+		time_wait = timer_tick;
 		break;
 	}
 }

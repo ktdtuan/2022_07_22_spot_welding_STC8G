@@ -112,69 +112,101 @@ void seg_request(void)
 	}
 }
 
+void seg_show_mode(void)
+{
+	static uint8_t duty;
+	static uint32_t time_wait;
+	int8_t id_led = 2;
+	uint16_t volt;
+
+	switch (show_mode)
+	{
+	case mode_high_volt:
+		seg_buffer[0] = segment_code[19]; // Power
+		seg_buffer[1] = segment_code[20]; // -
+		seg_buffer[2] = segment_code[38]; // off
+
+		if ((uint32_t)(timer_tick - time_wait) > TM2_CAL_TIME(1000))
+		{
+			show_mode = mode_show_volt;
+			time_wait = timer_tick;
+		}
+		break;
+	case mode_low_volt:
+		seg_buffer[0] = segment_code[23]; // Power
+		seg_buffer[1] = segment_code[26]; // -
+		seg_buffer[2] = segment_code[38]; // off
+
+		if ((uint32_t)(timer_tick - time_wait) > TM2_CAL_TIME(1000))
+		{
+			show_mode = mode_show_volt;
+			time_wait = timer_tick;
+		}
+		break;
+	case mode_show_duty:
+		seg_buffer[0] = segment_code[15]; // d
+		seg_buffer[1] = segment_code[systerm.duty / 10];
+		seg_buffer[2] = segment_code[systerm.duty % 10];
+
+		//nếu đang nhấn thay đổi duty thì ở lại để hiển thị thêm
+		if (duty != systerm.duty)
+		{
+			duty = systerm.duty;
+			time_wait = timer_tick;
+		}
+
+		if ((uint32_t)(timer_tick - time_wait) > TM2_CAL_TIME(1500))
+		{
+			show_mode = mode_show_volt;
+			time_wait = timer_tick;
+		}
+		break;
+	case mode_show_volt:
+		volt = volt_value;
+		while (id_led >= 0)
+		{
+			if (volt > 0)
+				seg_buffer[id_led--] = segment_code[volt % 10];
+			else
+				seg_buffer[id_led--] = segment_code[38]; // off
+			volt /= 10;
+		}
+		seg_buffer[1] |= segment_code[11];
+
+		//lựa chọn mode tiếp theo để hiển thị
+		if ((uint32_t)(timer_tick - time_wait) > TM2_CAL_TIME(1500))
+		{
+			if (volt_value > 340) //lớn hơn 34 volt thì báo high
+				show_mode = mode_high_volt;
+			else if (volt_value < 200) //nhỏ hơn 20 volt thì báo low
+				show_mode = mode_low_volt;
+			else
+				show_mode = mode_show_duty;
+			time_wait = timer_tick;
+		}
+
+		break;
+	}
+}
+
 void seg_handle(void)
 {
-	static uint32_t time_wait;
-	static bt_mode_run_t mode;
-	static uint16_t data_cmp;
 
-	// refresh data compare
-	if (mode != systerm.mode)
+	switch (button_mode)
 	{
-		mode = systerm.mode;
-		data_cmp = 0;
-	}
-
-	switch (mode)
-	{
-	case bt_mode_nomal:
-		if ((uint32_t)(timer_tick - time_wait) < 400)
-		{
-			if (data_cmp != systerm.duty)
-			{
-				seg_buffer[0] = segment_code[15]; // d
-				seg_buffer[1] = segment_code[systerm.duty / 10];
-				seg_buffer[2] = segment_code[systerm.duty % 10];
-				data_cmp = systerm.duty;
-				time_wait = timer_tick;
-			}
-		}
-		else
-		{
-			if (data_cmp != volt_value)
-			{
-				int8_t id_led = 2;
-				data_cmp = volt_value;
-				while (id_led >= 0)
-				{
-					if (data_cmp > 0)
-						seg_buffer[id_led--] = segment_code[data_cmp % 10];
-					else
-						seg_buffer[id_led--] = segment_code[38]; // off
-					data_cmp /= 10;
-				}
-				seg_buffer[1] |= segment_code[11];
-				data_cmp = volt_value;
-			}
-		}
-		if ((uint32_t)(timer_tick - time_wait) > 800)
-			time_wait = timer_tick;
+	case mode_nomal:
+		seg_show_mode();
 		break;
-	case bt_mode_power:
-		if (data_cmp == systerm.power)
-			break;
+	case mode_power:
 		seg_buffer[0] = segment_code[27];			 // Power
 		seg_buffer[1] = segment_code[10];			 // -
 		seg_buffer[2] = segment_code[systerm.power]; // 1-2-3
-		data_cmp = systerm.power;
 		break;
-	case bt_mode_pluse:
-		if (data_cmp == systerm.pulse)
-			break;
+	case mode_pluse:
+
 		seg_buffer[0] = segment_code[30];					   // Signal
 		seg_buffer[1] = segment_code[10];					   // -
 		seg_buffer[2] = segment_code[(systerm.pulse / 2 + 1)]; // vì số xung này sẽ là 1,3,5, nhưng hiển thị là 1,2,3
-		data_cmp = systerm.pulse;
 		break;
 	}
 }

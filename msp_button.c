@@ -68,13 +68,13 @@ void btn_handle(void)
 		{
 			flag_save = SET;
 			time_wait = timer_tick;
-			(systerm.duty < 99) ? (systerm.duty += 1) : (systerm.duty = 0);
+			(systerm.duty < 99) ? (systerm.duty += 1) : (systerm.duty = 1);
 		}
 		if (sw_stt2 == 1)
 		{
 			flag_save = SET;
 			time_wait = timer_tick;
-			(systerm.duty < 99) ? (systerm.duty += 1) : (systerm.duty = 0);
+			(systerm.duty > 1) ? (systerm.duty -= 1) : (systerm.duty = 99);
 		}
 
 		if (flag_save == SET && (uint32_t)(timer_tick - time_wait) > TM2_CAL_TIME(10000))

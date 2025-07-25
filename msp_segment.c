@@ -126,6 +126,10 @@ void seg_show_mode(void)
 		seg_buffer[1] = segment_code[20]; // -
 		seg_buffer[2] = segment_code[38]; // off
 
+		if (duty == 0)
+		{
+		}
+
 		if ((uint32_t)(timer_tick - time_wait) > TM2_CAL_TIME(1000))
 		{
 			show_mode = mode_show_volt;
@@ -148,7 +152,7 @@ void seg_show_mode(void)
 		seg_buffer[1] = segment_code[systerm.duty / 10];
 		seg_buffer[2] = segment_code[systerm.duty % 10];
 
-		//nếu đang nhấn thay đổi duty thì ở lại để hiển thị thêm
+		// nếu đang nhấn thay đổi duty thì ở lại để hiển thị thêm
 		if (duty != systerm.duty)
 		{
 			duty = systerm.duty;
@@ -173,25 +177,56 @@ void seg_show_mode(void)
 		}
 		seg_buffer[1] |= segment_code[11];
 
-		//lựa chọn mode tiếp theo để hiển thị
+		// lựa chọn mode tiếp theo để hiển thị
 		if ((uint32_t)(timer_tick - time_wait) > TM2_CAL_TIME(1500))
 		{
-			if (volt_value > 340) //lớn hơn 34 volt thì báo high
-				show_mode = mode_high_volt;
-			else if (volt_value < 200) //nhỏ hơn 20 volt thì báo low
-				show_mode = mode_low_volt;
+			if (volt_value > 340 || volt_value < 200) // nhỏ hơn 20 volt, lớn hơn 34 volt thì báo còi
+				show_mode = mode_buzzer_on;
 			else
 				show_mode = mode_show_duty;
 			time_wait = timer_tick;
 		}
+		break;
+	case mode_buzzer_on:
+		// bật còi
+		P35 = 0;
+		// tắt led
+		seg_buffer[0] = segment_code[38]; // off
+		seg_buffer[1] = segment_code[38]; // off
+		seg_buffer[2] = segment_code[38]; // off
 
+		time_wait = timer_tick;
+		show_mode = mode_buzzer_off;
+		break;
+	case mode_buzzer_off:
+		if ((uint32_t)(timer_tick - time_wait) < TM2_CAL_TIME(50))
+			break;
+
+		// tắt còi
+		P35 = 1;
+
+		if (volt_value > 340) // lớn hơn 34 volt thì báo high
+			show_mode = mode_high_volt;
+		else if (volt_value < 200) // nhỏ hơn 20 volt thì báo low
+			show_mode = mode_low_volt;
+		else // trường hợp còn lại là kích xung
+			show_mode = mode_prepare_ok;
+		time_wait = timer_tick;
+		break;
+	case mode_prepare_ok: // don't work in here
+		break;
+	case mode_pluse_work:
+		if ((uint32_t)(timer_tick - time_wait) < TM2_CAL_TIME(500))
+			break;
+
+		time_wait = timer_tick;
+		show_mode = mode_show_volt;
 		break;
 	}
 }
 
 void seg_handle(void)
 {
-
 	switch (button_mode)
 	{
 	case mode_nomal:

@@ -16,6 +16,11 @@ typedef enum
 	mode_high_volt,
 	mode_low_volt,
 	mode_show_duty,
+	mode_buzzer_on,
+	mode_buzzer_off,
+	mode_turn_off,
+	mode_prepare_ok, // đã chuẩn bị xong, kích xung.
+	mode_pluse_work, // đang kích xung hàn điểm
 } mode_show_t;
 
 struct
@@ -39,6 +44,8 @@ const uint8_t edge[6] = {0, 1, 0, 1, 0, 1};
 static uint8_t tm1_counter = 0;
 static uint8_t index_duty = 0;
 uint16_t time_duty[6];
+#define PIN_PULSE P11
+#define PIN_TRIGGER P54
 
 INTERRUPT(Timer0_Routine, EXTI_VectTimer0)
 {
@@ -47,7 +54,7 @@ INTERRUPT(Timer0_Routine, EXTI_VectTimer0)
 		tm1_counter = 0;
 		if (++index_duty >= systerm.pulse)
 			TIM_Timer0_SetRunState(HAL_State_OFF);
-		P11 = edge[index_duty];
+		PIN_PULSE = edge[index_duty];
 	}
 }
 
@@ -59,6 +66,9 @@ INTERRUPT(Timer2_Routine, EXTI_VectTimer2) // interrupt 10ms
 void enable_trigger(void)
 {
 	uint8_t i;
+	if (show_mode != mode_prepare_ok) // khi nào là mode chuẩn bị xong thì cho phép kích xung
+		return;
+	show_mode = mode_pluse_work;
 
 	for (i = 0; i < systerm.pulse - 1; i += 2)
 	{
@@ -70,21 +80,28 @@ void enable_trigger(void)
 
 	index_duty = 0;
 	TIM_Timer0_SetRunState(HAL_State_ON);
-	P11 = 0;
+	PIN_PULSE = 0;
 }
 
 void detect_trigger(void)
 {
-#define PIN_TRIGGER P54
 	static uint32_t time_comfirm;
 	static __BIT actived = RESET;
+
+	if (show_mode != mode_show_volt && show_mode != mode_show_duty)
+	{
+		actived = SET; // không cho kích xung bằng cách báo đã kích rồi
+		return;
+	}
 
 	if (PIN_TRIGGER == SET) // pin detect active
 	{
 		if (actived == RESET && (uint32_t)(timer_tick - time_comfirm) > TM2_CAL_TIME(1500))
 		{
 			actived = SET;
-			enable_trigger();
+
+			// bật còi, tắt màn hình để dành điện để kích fet
+			show_mode = mode_buzzer_on;
 		}
 	}
 	else // pin detect release
@@ -155,6 +172,7 @@ void main(void)
 	while (1)
 	{
 		detect_trigger();
+		enable_trigger();
 		seg_handle();
 		seg_request();
 		volt_read();
